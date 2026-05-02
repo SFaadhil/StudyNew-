@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>StudyNew</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
+
+  <style>
+    body { font-family: 'DM Sans', sans-serif; }
+
+    /* ── Animated background — unchanged ───────── */
+    .animated-bg {
+      background: linear-gradient(120deg, #e5e7eb, #f8fafc, #e0e7ff, #f1f5f9);
+      background-size: 300% 300%;
+      animation: gradientMove 14s ease infinite;
+    }
+    .dark .animated-bg {
+      background: linear-gradient(120deg, #020617, #0f172a, #020617, #1e293b);
+      background-size: 300% 300%;
+    }
+    @keyframes gradientMove {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* ── Glass card — unchanged ─────────────────── */
+    .glass {
+      backdrop-filter: blur(16px);
+      background: rgba(255, 255, 255, 0.6);
+    }
+    .dark .glass {
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    /* ── Floating ambient pills ─────────────────── */
+    .floaters {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .floater {
+      position: absolute;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 999px;
+      opacity: 0;
+      animation: floatUp var(--dur) ease-in-out var(--delay) both;
+    }
+    .floater-light {
+      background: rgba(255,255,255,0.55);
+      color: #6366f1;
+      border: 1px solid rgba(99,102,241,0.18);
+      backdrop-filter: blur(8px);
+    }
+    .dark .floater-light {
+      background: rgba(30,27,75,0.5);
+      color: #a5b4fc;
+      border: 1px solid rgba(165,180,252,0.15);
+    }
+    @keyframes floatUp {
+      0%   { opacity: 0;    transform: translateY(0px)    scale(0.95); }
+      15%  { opacity: 0.65; transform: translateY(-20px)  scale(1);    }
+      85%  { opacity: 0.45; transform: translateY(-90px)  scale(1);    }
+      100% { opacity: 0;    transform: translateY(-120px) scale(0.95); }
+    }
+
+    /* ── Hero card entrance ─────────────────────── */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+    .hero-card {
+      animation: fadeSlideUp 0.75s cubic-bezier(0.16,1,0.3,1) both;
+      animation-delay: 0.1s;
+    }
+
+    /* ── Feature chips ──────────────────────────── */
+    .feature-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 500;
+      backdrop-filter: blur(12px);
+      background: rgba(255,255,255,0.48);
+      border: 1px solid rgba(255,255,255,0.72);
+      color: #475569;
+      opacity: 0;
+      animation: fadeSlideUp 0.6s cubic-bezier(0.16,1,0.3,1) both;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .feature-chip:hover {
+      transform: translateY(-3px);
+      background: rgba(255,255,255,0.8);
+    }
+    .dark .feature-chip {
+      background: rgba(15,23,42,0.48);
+      border-color: rgba(255,255,255,0.06);
+      color: #94a3b8;
+    }
+    .dark .feature-chip:hover { background: rgba(30,41,59,0.7); }
+
+    .feature-chip:nth-child(1) { animation-delay: 0.5s;  }
+    .feature-chip:nth-child(2) { animation-delay: 0.65s; }
+    .feature-chip:nth-child(3) { animation-delay: 0.8s;  }
+
+    .chip-icon {
+      width: 26px; height: 26px;
+      border-radius: 8px;
+      background: rgba(99,102,241,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+    .dark .chip-icon { background: rgba(165,180,252,0.1); }
+
+    /* ── Typing cursor blink ────────────────────── */
+    #typingText::after {
+      content: '|';
+      animation: blink 0.85s step-end infinite;
+      opacity: 0.4;
+      margin-left: 1px;
+    }
+    @keyframes blink {
+      0%,100% { opacity: 0.4; }
+      50%      { opacity: 0;   }
+    }
+
+    /* ── Footer credit ──────────────────────────── */
+    .footer-credit {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11.5px;
+      color: rgba(0,0,0,0.22);
+      white-space: nowrap;
+      z-index: 10;
+      transition: color 0.2s;
+    }
+    .dark .footer-credit { color: rgba(255,255,255,0.18); }
+    .footer-credit a {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .footer-credit:hover       { color: rgba(0,0,0,0.45); }
+    .dark .footer-credit:hover { color: rgba(255,255,255,0.45); }
+  </style>
+</head>
+
+<body class="animated-bg min-h-screen transition-colors duration-500">
+
+  <!-- Floating ambient pills layer -->
+  <div class="floaters" id="floaters"></div>
+
+  <!-- Navbar — unchanged -->
+  <header class="flex justify-between items-center px-10 py-6 relative z-10">
+    <h1 class="font-semibold text-lg tracking-wide dark:text-white">StudyNew</h1>
+    <div class="flex items-center gap-4">
+      <button id="themeToggle"
+        class="text-sm px-4 py-2 rounded-full bg-black/10 dark:bg-white/10
+               hover:scale-105 transition dark:text-white">
+        🌗
+      </button>
+      <a href="chat.html"
+         class="text-sm px-5 py-2 rounded-full bg-black text-white
+                dark:bg-white dark:text-black hover:scale-105 transition">
+        Start Studying
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <main class="flex flex-col items-center justify-center h-[80vh] px-6 relative z-10">
+
+    <!-- Glass card — unchanged structure -->
+    <div class="glass rounded-3xl p-12 max-w-2xl w-full text-center shadow-xl hero-card">
+      <h2 class="text-4xl font-semibold mb-4 dark:text-white">
+        Your study material,<br>
+        explained intelligently.
+      </h2>
+
+      <!-- Typing animation — unchanged -->
+      <p id="typingText" class="text-gray-600 dark:text-gray-300 mb-8 h-6"></p>
+
+      <a href="chat.html"
+         class="inline-block bg-black text-white dark:bg-white dark:text-black
+                px-8 py-3 rounded-full font-medium hover:scale-105 transition">
+        Enter StudyNew →
+      </a>
+    </div>
+
+    <!-- Feature chips — fade in below card -->
+    <div class="flex flex-wrap gap-3 justify-center mt-7">
+      <div class="feature-chip">
+        <span class="chip-icon">📄</span>
+        Upload any PDF
+      </div>
+      <div class="feature-chip">
+        <span class="chip-icon">🔒</span>
+        Answers from your material only
+      </div>
+      <div class="feature-chip">
+        <span class="chip-icon">🧒</span>
+        5 explanation modes
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer credit -->
+  <footer class="footer-credit">
+    Built by <a href="https://www.linkedin.com/in/s-faadhil/" target="_blank">Faa</a>
+  </footer>
+
+  <script>
+    /* ── Dark / Light mode — unchanged ─────────── */
+    const root   = document.documentElement;
+    const toggle = document.getElementById("themeToggle");
+
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      root.classList.toggle("dark", savedTheme === "dark");
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      root.classList.add("dark");
+    }
+    toggle.addEventListener("click", () => {
+      root.classList.toggle("dark");
+      localStorage.setItem("theme", root.classList.contains("dark") ? "dark" : "light");
+    });
+
+    /* ── Typing animation — unchanged ───────────── */
+    const texts = [
+      "Analyzing your notes…",
+      "Understanding your coursework…",
+      "Explaining concepts simply…",
+      "Helping you study smarter…"
+    ];
+    let index = 0, charIndex = 0;
+    const typingEl = document.getElementById("typingText");
+
+    function type() {
+      if (charIndex < texts[index].length) {
+        typingEl.textContent += texts[index].charAt(charIndex++);
+        setTimeout(type, 60);
+      } else { setTimeout(erase, 2000); }
+    }
+    function erase() {
+      if (charIndex > 0) {
+        typingEl.textContent = texts[index].substring(0, --charIndex);
+        setTimeout(erase, 40);
+      } else {
+        index = (index + 1) % texts.length;
+        setTimeout(type, 400);
+      }
+    }
+    type();
+
+    /* ── Floating ambient pills ─────────────────── */
+    const pills = [
+      "📚 strict mode",      "🔬 deep analysis",   "🧒 explain simply",
+      "📖 source view",      "✨ expand with AI",   "📄 PDF indexed",
+      "🔒 from your notes",  "💡 concept explained","📝 page cited",
+      "🎯 focused answers",  "⚡ instant response", "🗂️ multi-file"
+    ];
+
+    const container = document.getElementById("floaters");
+
+    function spawnFloater() {
+      const el    = document.createElement("div");
+      el.className = "floater floater-light";
+      el.textContent = pills[Math.floor(Math.random() * pills.length)];
+
+      const dur   = 8 + Math.random() * 6;
+      const delay = Math.random() * 1.5;
+      const left  = 4 + Math.random() * 88;
+
+      el.style.setProperty("--dur",   `${dur}s`);
+      el.style.setProperty("--delay", `${delay}s`);
+      el.style.left   = `${left}%`;
+      el.style.bottom = "-50px";
+
+      container.appendChild(el);
+      setTimeout(() => el.remove(), (dur + delay + 1) * 1000);
+    }
+
+    // Initial staggered burst
+    for (let i = 0; i < 7; i++) setTimeout(spawnFloater, i * 700);
+    // Steady stream
+    setInterval(spawnFloater, 1600);
+  </script>
+
+</body>
+</html>

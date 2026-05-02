@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>StudyNew | Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>tailwind.config = { darkMode: 'class' }</script>
+
+  <style>
+    body { font-family: 'DM Sans', sans-serif; }
+
+    .chat-bg {
+      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 40%, #e0e7ff 100%);
+      background-size: 300% 300%;
+      animation: gradientShift 18s ease infinite;
+    }
+    .dark .chat-bg {
+      background: linear-gradient(135deg, #020617 0%, #0f172a 40%, #1e1b4b 100%);
+      background-size: 300% 300%;
+    }
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .msg-enter { animation: slideUp 0.3s ease-out; }
+
+    /* Inline citation superscript badges */
+    .cite-badge {
+      display: inline-flex; align-items: center;
+      font-size: 9.5px; font-family: 'DM Mono', monospace; font-weight: 600;
+      background: #e0e7ff; color: #3730a3;
+      padding: 0px 5px; border-radius: 4px;
+      margin: 0 1px; vertical-align: super;
+      line-height: 1.6; text-decoration: none;
+      cursor: pointer; transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .cite-badge:hover { background: #c7d2fe; }
+
+    /* Source badge pill */
+    .source-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #e0e7ff; color: #3730a3;
+      padding: 2px 10px; border-radius: 999px;
+      font-size: 11px; font-family: 'DM Mono', monospace;
+      font-weight: 500; margin: 2px;
+      text-decoration: none; transition: background 0.15s;
+    }
+    .source-badge:hover { background: #c7d2fe; cursor: pointer; }
+
+    /* Mode badge */
+    .badge-strict        { background:#dcfce7; color:#166534; }
+    .badge-expanded      { background:#fef3c7; color:#92400e; }
+    .badge-hybrid        { background:#e0f2fe; color:#0c4a6e; }
+    .badge-not-in-source { background:#fff7ed; color:#92400e; border: 1px solid #f59e0b; }
+    .badge-notfound      { background:#fee2e2; color:#991b1b; }
+    .badge-raw           { background:#f3f4f6; color:#374151; }
+
+    /* Typing dots */
+    .typing span {
+      display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; background: #94a3b8; margin: 0 2px;
+      animation: bounce 1.2s infinite ease-in-out;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40%           { transform: translateY(-6px); }
+    }
+
+    /* Markdown */
+    .md-body h1, .md-body h2, .md-body h3 { font-weight: 600; margin: 8px 0 4px; }
+    .md-body h1 { font-size: 1.1rem; }
+    .md-body h2 { font-size: 1rem; }
+    .md-body h3 { font-size: 0.95rem; }
+    .md-body p  { margin: 4px 0; }
+    .md-body ul, .md-body ol { padding-left: 1.4rem; margin: 4px 0; }
+    .md-body ul { list-style-type: disc; }
+    .md-body ol { list-style-type: decimal; }
+    .md-body li { margin: 2px 0; }
+    .md-body strong { font-weight: 600; }
+    .md-body em { font-style: italic; }
+    .md-body code {
+      background: #f1f5f9; border-radius: 4px;
+      padding: 1px 5px; font-family: 'DM Mono', monospace; font-size: 12px;
+    }
+    .md-body pre {
+      background: #f1f5f9; border-radius: 8px;
+      padding: 10px 14px; overflow-x: auto; margin: 6px 0;
+    }
+    .md-body pre code { background: none; padding: 0; }
+
+    /* Scrollbar */
+    #chatWindow::-webkit-scrollbar { width: 5px; }
+    #chatWindow::-webkit-scrollbar-track { background: transparent; }
+    #chatWindow::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+    /* Action buttons */
+    .action-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .action-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 13px; border-radius: 999px;
+      font-size: 11.5px; font-weight: 500; cursor: pointer;
+      transition: all 0.18s; border: 1px solid transparent;
+    }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-expand       { background:#fef3c7; border-color:#fcd34d; color:#92400e; }
+    .btn-expand:hover { background:#fde68a; }
+    .btn-detail       { background:#ede9fe; border-color:#c4b5fd; color:#5b21b6; }
+    .btn-detail:hover { background:#ddd6fe; }
+    .btn-kid          { background:#fce7f3; border-color:#f9a8d4; color:#9d174d; }
+    .btn-kid:hover    { background:#fbcfe8; }
+    .btn-source       { background:#ecfdf5; border-color:#6ee7b7; color:#065f46; }
+    .btn-source:hover { background:#d1fae5; }
+    .btn-raw          { background:#f1f5f9; border-color:#cbd5e1; color:#475569; }
+    .btn-raw:hover    { background:#e2e8f0; }
+
+    /* Raw clause panel */
+    .raw-panel {
+      margin-top: 8px; max-width: 82%;
+      background: #0f172a; color: #e2e8f0;
+      border-radius: 12px; padding: 14px 16px;
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      line-height: 1.7; white-space: pre-wrap;
+      max-height: 320px; overflow-y: auto;
+    }
+    .raw-panel .raw-page-header {
+      color: #818cf8; font-weight: 600; font-size: 10px;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: 6px; margin-top: 14px;
+    }
+    .raw-panel .raw-page-header:first-child { margin-top: 0; }
+
+    /* File item */
+    .file-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 10px; border-radius: 10px;
+      background: #f8fafc; border: 1px solid #e2e8f0;
+      font-size: 12px; color: #475569; transition: background 0.15s;
+    }
+    .file-item:hover { background: #e0e7ff; }
+    .file-pages { font-family: 'DM Mono', monospace; font-size: 10px; color: #94a3b8; }
+
+    /* Dark mode */
+    .dark body { color-scheme: dark; }
+    .dark header { background: rgba(15,23,42,0.85) !important; border-color: #1e293b !important; }
+    .dark header span, .dark header a { color: #e2e8f0; }
+    .dark header a:hover { color: #818cf8; }
+    .dark aside { background: rgba(15,23,42,0.75) !important; border-color: #1e293b !important; }
+    .dark aside h3 { color: #cbd5e1; }
+    .dark .file-item { background: #1e293b; border-color: #334155; color: #94a3b8; }
+    .dark .file-item:hover { background: #312e81; color: #e0e7ff; }
+    .dark #uploadStatus { background: #1e1b4b; color: #a5b4fc; border-color: #3730a3; }
+    .dark #modeDisplay { filter: brightness(0.75); }
+    .dark aside p.text-slate-400 { color: #64748b; }
+    .dark aside .border-t { border-color: #1e293b; }
+    .dark .bg-white.border.border-slate-200 { background: #1e293b !important; border-color: #334155 !important; color: #cbd5e1 !important; }
+    .dark .md-body { color: #cbd5e1; }
+    .dark .md-body code { background: #0f172a; color: #a5b4fc; }
+    .dark .md-body pre { background: #0f172a; }
+    .dark .bg-white\/80 { background: rgba(15,23,42,0.85) !important; border-color: #1e293b !important; }
+    .dark #chatInput { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+    .dark #chatInput::placeholder { color: #475569; }
+    .dark .typing > div { background: #1e293b !important; border-color: #334155 !important; }
+
+    /* ── Animated logo ───────────────────────── */
+    .logo-mark {
+      width: 32px; height: 32px; flex-shrink: 0;
+      filter: drop-shadow(0 0 6px rgba(99,102,241,0));
+      transition: filter 0.4s ease;
+    }
+    .logo-mark:hover, .group:hover .logo-mark {
+      filter: drop-shadow(0 0 8px rgba(99,102,241,0.5));
+    }
+    .logo-mark svg { width: 100%; height: 100%; }
+
+    .logo-bg {
+      fill: #4f46e5;
+      animation: logoPulse 3s ease-in-out infinite;
+    }
+    @keyframes logoPulse {
+      0%,100% { fill: #4f46e5; }
+      50%      { fill: #6366f1; }
+    }
+
+    .logo-path {
+      fill: none; stroke: white;
+      stroke-dasharray: 40;
+      stroke-dashoffset: 40;
+      animation: logoStroke 1.2s cubic-bezier(0.4,0,0.2,1) forwards;
+    }
+    .logo-p1 { animation-delay: 0.1s; }
+    .logo-p2 { animation-delay: 0.4s; }
+
+    @keyframes logoStroke {
+      to { stroke-dashoffset: 0; }
+    }
+
+    .logo-dot {
+      fill: #a5b4fc;
+      transform-origin: 21px 8px;
+      animation: logoDot 1.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      transform: scale(0);
+    }
+    @keyframes logoDot {
+      0%   { transform: scale(0); opacity: 0; }
+      60%  { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .logo-text {
+      color: #1e293b;
+      background: linear-gradient(90deg, #4f46e5, #818cf8, #4f46e5);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: logoShimmer 4s linear infinite;
+    }
+    @keyframes logoShimmer {
+      to { background-position: 200% center; }
+    }
+    .dark .logo-text {
+      background: linear-gradient(90deg, #818cf8, #c7d2fe, #818cf8);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: logoShimmer 4s linear infinite;
+    }
+
+    /* Hybrid button */
+    .btn-hybrid       { background:#f0f9ff; border-color:#7dd3fc; color:#0c4a6e; }
+    .btn-hybrid:hover { background:#e0f2fe; }
+
+    /* ── Animated logo ───────────────────────── */
+      font-size: 13px; padding: 5px 12px; border-radius: 999px;
+      background: rgba(0,0,0,0.08); border: none; cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+    #themeToggle:hover { transform: scale(1.08); }
+    .dark #themeToggle { background: rgba(255,255,255,0.1); }
+  </style>
+</head>
+
+<body class="h-screen chat-bg">
+
+<!-- Auth Guard -->
+<script>
+  if (localStorage.getItem("isAdmin") !== "true") {
+    window.location.href = "login.html";
+  }
+</script>
+
+<!-- Header -->
+<header class="flex justify-between items-center px-8 py-4 bg-white/80 backdrop-blur border-b border-slate-200">
+  <a href="index.html" class="flex items-center gap-3 group" style="text-decoration:none">
+    <div class="logo-mark" id="logoMark">
+      <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect class="logo-bg" width="28" height="28" rx="8"/>
+        <path class="logo-path logo-p1" d="M7 8h9a3 3 0 010 6H7V8z" stroke-width="1.8" stroke-linecap="round"/>
+        <path class="logo-path logo-p2" d="M7 14h11a3 3 0 010 6H7v-6z" stroke-width="1.8" stroke-linecap="round"/>
+        <circle class="logo-dot" cx="21" cy="8" r="2"/>
+      </svg>
+    </div>
+    <span class="logo-text font-semibold tracking-tight">StudyNew</span>
+  </a>
+  <nav class="flex items-center gap-5 text-sm">
+    <a href="files.html" class="text-slate-500 hover:text-indigo-600 transition">My Files</a>
+    <button id="themeToggle" title="Toggle dark mode">🌗</button>
+  </nav>
+</header>
+
+<!-- Main Layout -->
+<main class="flex" style="height: calc(100vh - 69px);">
+
+  <!-- Sidebar -->
+  <aside class="w-72 bg-white/70 backdrop-blur border-r border-slate-200 flex flex-col p-5 gap-4">
+    <div class="flex items-center justify-between">
+      <h3 class="font-semibold text-slate-700 text-sm">Study Materials</h3>
+      <label for="fileInput"
+        class="cursor-pointer text-xs text-indigo-600 hover:text-indigo-800
+               bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full transition font-medium">
+        + Upload
+      </label>
+      <input type="file" id="fileInput" accept=".pdf" class="hidden" />
+    </div>
+    <div id="uploadStatus" class="hidden text-xs text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg">
+      Indexing pages…
+    </div>
+    <ul id="fileList" class="space-y-2 flex-1 overflow-y-auto">
+      <li class="text-xs text-slate-400 text-center pt-8">No files uploaded yet</li>
+    </ul>
+    <div class="border-t border-slate-200 pt-4">
+      <p class="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wider">Answer Mode</p>
+
+      <!-- Mode selector -->
+      <div id="modeSelectorWrap" style="position:relative">
+        <button id="modeSelectorBtn"
+          class="w-full text-left text-xs bg-green-50 text-green-700 border border-green-200
+                 rounded-lg px-3 py-2 font-medium flex items-center justify-between
+                 hover:brightness-95 transition cursor-pointer">
+          <span id="modeBtnLabel">🔒 Strict — Source only</span>
+          <span style="font-size:9px;opacity:0.6">▼</span>
+        </button>
+        <div id="modeDropdown"
+          class="hidden absolute bottom-full left-0 right-0 mb-1 bg-white border border-slate-200
+                 rounded-xl shadow-lg overflow-hidden z-50">
+          <div class="p-1 space-y-0.5">
+            <button class="mode-option w-full text-left text-xs px-3 py-2 rounded-lg hover:bg-slate-50 transition font-medium text-slate-700"
+              data-mode="strict" data-label="🔒 Strict — Source only"
+              data-cls="bg-green-50 text-green-700 border-green-200">
+              🔒 <span class="font-semibold">Strict</span> — Source only
+              <div class="text-slate-400 font-normal mt-0.5">Only answers from your documents</div>
+            </button>
+            <button class="mode-option w-full text-left text-xs px-3 py-2 rounded-lg hover:bg-slate-50 transition font-medium text-slate-700"
+              data-mode="hybrid" data-label="🔀 Source + AI Blended"
+              data-cls="bg-sky-50 text-sky-700 border-sky-200">
+              🔀 <span class="font-semibold">Source + AI</span> — Blended
+              <div class="text-slate-400 font-normal mt-0.5">Source material + broader AI context</div>
+            </button>
+            <button class="mode-option w-full text-left text-xs px-3 py-2 rounded-lg hover:bg-slate-50 transition font-medium text-slate-700"
+              data-mode="detail" data-label="🔬 Explain in Detail"
+              data-cls="bg-purple-50 text-purple-700 border-purple-200">
+              🔬 <span class="font-semibold">Detail</span> — Deep analysis
+              <div class="text-slate-400 font-normal mt-0.5">Structured breakdown from source</div>
+            </button>
+            <button class="mode-option w-full text-left text-xs px-3 py-2 rounded-lg hover:bg-slate-50 transition font-medium text-slate-700"
+              data-mode="kid" data-label="🧒 Explain Like I'm a Kid"
+              data-cls="bg-pink-50 text-pink-700 border-pink-200">
+              🧒 <span class="font-semibold">Simple</span> — Like I'm a kid
+              <div class="text-slate-400 font-normal mt-0.5">Easy language, analogies, emojis</div>
+            </button>
+            <button class="mode-option w-full text-left text-xs px-3 py-2 rounded-lg hover:bg-slate-50 transition font-medium text-slate-700"
+              data-mode="expand" data-label="🌐 Expand with AI"
+              data-cls="bg-amber-50 text-amber-700 border-amber-200">
+              🌐 <span class="font-semibold">Expand</span> — General AI
+              <div class="text-slate-400 font-normal mt-0.5">Answer from AI knowledge only</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button id="clearChatBtn"
+        class="mt-3 w-full text-xs text-slate-400 hover:text-red-500 hover:bg-red-50
+               border border-slate-200 hover:border-red-200 rounded-lg px-3 py-2
+               transition font-medium text-center">
+        🗑 Clear Chat History
+      </button>
+    </div>
+  </aside>
+
+  <!-- Chat -->
+  <section class="flex flex-col flex-1 overflow-hidden">
+    <div id="chatWindow" class="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+      <div class="msg-enter">
+        <div class="max-w-[68%] bg-white border border-slate-200 shadow-sm
+                    text-sm px-4 py-3 rounded-2xl rounded-tl-sm text-slate-700">
+          👋 Hi! Upload a PDF and ask me anything about it. I'll answer <strong>only from your material</strong> — no guessing.
+        </div>
+      </div>
+    </div>
+    <div class="px-6 py-4 bg-white/80 backdrop-blur border-t border-slate-200">
+      <div class="flex items-center gap-3 max-w-4xl mx-auto">
+        <input id="chatInput" type="text"
+          placeholder="Ask a question about your uploaded material…"
+          class="flex-1 px-5 py-3 rounded-full border border-slate-300
+                 focus:outline-none focus:ring-2 focus:ring-indigo-400
+                 text-sm bg-white text-slate-800 placeholder-slate-400" />
+        <button id="sendBtn"
+          class="bg-indigo-600 text-white px-6 py-3 rounded-full font-medium text-sm
+                 hover:bg-indigo-700 transition flex items-center gap-2 shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+          </svg>
+          Send
+        </button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function() {
+  const API         = "http://127.0.0.1:8000";
+  const chatWindow  = document.getElementById("chatWindow");
+  const chatInput   = document.getElementById("chatInput");
+  const sendBtn     = document.getElementById("sendBtn");
+  const fileInput   = document.getElementById("fileInput");
+  const fileList    = document.getElementById("fileList");
+  const uploadStatus    = document.getElementById("uploadStatus");
+  const clearChatBtn    = document.getElementById("clearChatBtn");
+  const modeSelectorBtn = document.getElementById("modeSelectorBtn");
+  const modeDropdown    = document.getElementById("modeDropdown");
+  const modeBtnLabel    = document.getElementById("modeBtnLabel");
+
+  let selectedMode = "strict";
+
+  // ── Mode selector dropdown ───────────────
+  modeSelectorBtn.addEventListener("click", function(e) {
+    e.stopPropagation();
+    modeDropdown.classList.toggle("hidden");
+  });
+  document.addEventListener("click", function() {
+    modeDropdown.classList.add("hidden");
+  });
+  document.querySelectorAll(".mode-option").forEach(function(opt) {
+    opt.addEventListener("click", function() {
+      selectedMode = opt.dataset.mode;
+      const label  = opt.dataset.label;
+      const cls    = opt.dataset.cls;
+      modeBtnLabel.textContent = label;
+      modeSelectorBtn.className = "w-full text-left text-xs border rounded-lg px-3 py-2 font-medium flex items-center justify-between hover:brightness-95 transition cursor-pointer " + cls;
+      modeDropdown.classList.add("hidden");
+    });
+  });
+
+  clearChatBtn.addEventListener("click", function() {
+    if (confirm("Clear all chat history?")) clearChat();
+  });
+
+  // ── Dark mode ───────────────────────────────
+  const root = document.documentElement;
+  const themeToggle = document.getElementById("themeToggle");
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme) root.classList.toggle("dark", savedTheme === "dark");
+  else if (window.matchMedia("(prefers-color-scheme: dark)").matches) root.classList.add("dark");
+  themeToggle.addEventListener("click", () => {
+    root.classList.toggle("dark");
+    localStorage.setItem("theme", root.classList.contains("dark") ? "dark" : "light");
+  });
+
+  // ── Chat persistence ─────────────────────
+  const STORAGE_KEY = "studynew_chat";
+
+  function saveChat() {
+    const messages = [];
+    chatWindow.querySelectorAll("[data-msg]").forEach(el => {
+      messages.push({ type: el.dataset.msg, html: el.outerHTML });
+    });
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch(e) {}
+  }
+
+  function restoreChat() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      const messages = JSON.parse(saved);
+      if (!messages.length) return;
+      // Remove the default welcome message
+      chatWindow.innerHTML = "";
+      messages.forEach(m => {
+        const tmp = document.createElement("div");
+        tmp.innerHTML = m.html;
+        const el = tmp.firstElementChild;
+        if (el) {
+          // Re-wire any action buttons that were saved
+          rewireMessage(el);
+          chatWindow.appendChild(el);
+        }
+      });
+      scrollBottom();
+    } catch(e) { console.warn("Could not restore chat:", e); }
+  }
+
+  function rewireMessage(wrap) {
+    // Restore the original query from data attribute
+    const originalQuery = wrap.dataset.query || "";
+    const actionBar = wrap.querySelector(".action-bar");
+    if (actionBar) {
+      // Re-enable all buttons (they may have been saved as disabled)
+      actionBar.querySelectorAll(".action-btn").forEach(b => {
+        b.disabled = false; b.style.opacity = ""; b.style.cursor = "";
+      });
+      actionBar.querySelectorAll("[data-mode]").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          actionBar.querySelectorAll(".action-btn").forEach(function(b) {
+            b.disabled = true; b.style.opacity = "0.4"; b.style.cursor = "not-allowed";
+          });
+          btn.textContent = "Loading…";
+          sendMessage(btn.getAttribute("data-mode"), originalQuery);
+        });
+      });
+      const rawBtn = actionBar.querySelector("[data-action='toggle-raw']");
+      const rawPanel = wrap.querySelector(".raw-panel");
+      if (rawBtn && rawPanel) {
+        rawBtn.addEventListener("click", function() {
+          const hidden = rawPanel.classList.toggle("hidden");
+          rawBtn.textContent = hidden ? "📄 Show Exact Clauses" : "📄 Hide Exact Clauses";
+        });
+      }
+    }
+  }
+
+  function clearChat() {
+    localStorage.removeItem(STORAGE_KEY);
+    chatWindow.innerHTML = '<div class="msg-enter"><div class="max-w-[68%] bg-white border border-slate-200 shadow-sm text-sm px-4 py-3 rounded-2xl rounded-tl-sm text-slate-700">👋 Hi! Upload a PDF and ask me anything about it. I\'ll answer <strong>only from your material</strong> — no guessing.</div></div>';
+  }
+
+  // Restore on page load
+  restoreChat();
+  async function loadFiles() {
+    try {
+      const res   = await fetch(API + "/files");
+      const files = await res.json();
+      fileList.innerHTML = "";
+      if (!files.length) {
+        fileList.innerHTML = '<li class="text-xs text-slate-400 text-center pt-8">No files uploaded yet</li>';
+        return;
+      }
+      files.forEach(f => {
+        const name  = typeof f === "object" ? f.name  : f;
+        const pages = typeof f === "object" ? f.pages : "?";
+        const li = document.createElement("li");
+        li.className = "file-item";
+        li.innerHTML = '<span class="truncate flex-1">📄 ' + escHtml(name) + '</span>'
+                     + '<span class="file-pages ml-2">' + pages + 'p</span>';
+        fileList.appendChild(li);
+      });
+    } catch (e) { console.error("Could not load files:", e); }
+  }
+  loadFiles();
+
+  // ── Upload ───────────────────────────────────
+  fileInput.addEventListener("change", async function() {
+    const file = fileInput.files[0];
+    if (!file) return;
+    uploadStatus.textContent = 'Indexing "' + file.name + '"…';
+    uploadStatus.classList.remove("hidden");
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res  = await fetch(API + "/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      uploadStatus.textContent = "✅ Indexed " + data.pages_indexed + ' pages from "' + data.filename + '"';
+      setTimeout(() => uploadStatus.classList.add("hidden"), 3000);
+      await loadFiles();
+    } catch (e) {
+      uploadStatus.textContent = "❌ Upload failed. Is the server running?";
+    }
+    fileInput.value = "";
+  });
+
+  // ── Send message ─────────────────────────────
+  let isSending = false;
+
+  sendBtn.addEventListener("click", function() { sendMessage(selectedMode); });
+  chatInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(selectedMode); }
+  });
+
+  async function sendMessage(mode, overrideText) {
+    if (isSending) return;
+    const text = overrideText || chatInput.value.trim();
+    if (!text) return;
+
+    isSending = true;
+    sendBtn.disabled = true;
+    sendBtn.style.opacity = "0.6";
+
+    if (!overrideText) {
+      addUserMessage(text);
+      chatInput.value = "";
+    }
+
+    updateMode(mode);
+    const typingEl = addTyping();
+
+    try {
+      const res  = await fetch(API + "/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, mode: mode || "strict" })
+      });
+      const data = await res.json();
+      typingEl.remove();
+      addAIMessage(data, text);
+    } catch (e) {
+      typingEl.remove();
+      addAIMessage({ reply: "❌ Could not reach the backend. Make sure the server is running.",
+                     sources: [], raw_pages: [], mode: "error" }, text);
+    } finally {
+      isSending = false;
+      sendBtn.disabled = false;
+      sendBtn.style.opacity = "1";
+    }
+  }
+
+  // ── Helpers 
+  function scrollBottom() { chatWindow.scrollTop = chatWindow.scrollHeight; }
+
+  function escHtml(str) {
+    return String(str || "")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  function updateMode(mode) {
+    const map = {
+      expand:        ["bg-amber-50 text-amber-700 border-amber-200",      "🌐 Expanded — General AI"],
+      detail:        ["bg-purple-50 text-purple-700 border-purple-200",   "🔬 Detail — Deep Analysis"],
+      kid:           ["bg-pink-50 text-pink-700 border-pink-200",         "🧒 Simple Explanation"],
+      source_explain:["bg-emerald-50 text-emerald-700 border-emerald-200","📖 Source + Explanation"],
+      hybrid:        ["bg-sky-50 text-sky-700 border-sky-200",            "🔀 Source + AI Blended"],
+      not_in_source: ["bg-amber-50 text-amber-800 border-amber-300",      "📭 Not in material — AI used"],
+    };
+    const [cls, label] = map[mode] || ["bg-green-50 text-green-700 border-green-200","🔒 Strict — Source only"];
+    modeSelectorBtn.className = "w-full text-left text-xs border rounded-lg px-3 py-2 font-medium flex items-center justify-between hover:brightness-95 transition cursor-pointer " + cls;
+    modeBtnLabel.textContent = label;
+  }
+
+  // ── Citation renderer — [p.6] → superscript badge ──
+  function renderCitations(html, sources) {
+    if (!html) return "";
+    return html.replace(/\[p\.(\d+)\]/g, function(match, pageNum) {
+      const page = parseInt(pageNum);
+      var src = null;
+      if (sources && sources.length > 0) {
+        src = sources.find(function(s) { return s.page === page; }) || sources[0];
+      }
+      if (!src) return '<span class="cite-badge">p.' + page + '</span>';
+      var url = "http://localhost/Studynew/uploads/" + encodeURIComponent(src.file) + "#page=" + page;
+      return '<a href="' + url + '" target="_blank" class="cite-badge" title="'
+           + escHtml(src.file) + ' · p' + page + '">p.' + page + '</a>';
+    });
+  }
+
+  // ── Message renderers ──
+  function addUserMessage(text) {
+    const wrap = document.createElement("div");
+    wrap.className = "flex justify-end msg-enter";
+    wrap.dataset.msg = "user";
+    const bubble = document.createElement("div");
+    bubble.className = "max-w-[68%] bg-indigo-600 text-white text-sm px-4 py-3 rounded-2xl rounded-tr-sm shadow-sm";
+    bubble.textContent = text;
+    wrap.appendChild(bubble);
+    chatWindow.appendChild(wrap);
+    scrollBottom();
+    saveChat();
+  }
+
+  function addTyping() {
+    const el = document.createElement("div");
+    el.className = "msg-enter";
+    el.innerHTML = '<div class="inline-flex items-center gap-1 bg-white border border-slate-200 shadow-sm px-4 py-3 rounded-2xl rounded-tl-sm typing"><span></span><span></span><span></span></div>';
+    chatWindow.appendChild(el);
+    scrollBottom();
+    return el;
+  }
+
+  function addAIMessage(data, originalQuery) {
+    const reply        = (data && data.reply)         ? data.reply         : "⚠️ No response received.";
+    const ai_supplement= (data && data.ai_supplement) ? data.ai_supplement : null;
+    const sources      = (data && data.sources)       ? data.sources       : [];
+    const raw_pages    = (data && data.raw_pages)     ? data.raw_pages     : [];
+    const mode         = (data && data.mode)          ? data.mode          : "strict";
+
+    const wrap = document.createElement("div");
+    wrap.className = "msg-enter space-y-1";
+    wrap.dataset.msg   = "ai";
+    wrap.dataset.query = originalQuery;
+
+    // Badge
+    const badgeMap = {
+      strict:"badge-strict", detail:"badge-strict", kid:"badge-strict",
+      source_explain:"badge-strict", hybrid:"badge-hybrid",
+      expanded:"badge-expanded", not_in_source:"badge-not-in-source",
+      not_found:"badge-notfound", error:"badge-notfound"
+    };
+    const labelMap = {
+      strict:"📚 From your material", detail:"🔬 Detailed analysis",
+      kid:"🧒 Simple explanation", source_explain:"📖 Source + Explanation",
+      hybrid:"🔀 Source + AI Blended", expanded:"🌐 General knowledge",
+      not_in_source:"⚠️ Not in your material — AI answer",
+      not_found:"❓ Not in material", error:"⚠️ Error"
+    };
+    const badgeClass = badgeMap[mode] || "badge-raw";
+    const badgeLabel = labelMap[mode] || mode;
+
+    // Source pills
+    var pillsHtml = "";
+    sources.forEach(function(s) {
+      var url = "http://localhost/Studynew/uploads/" + encodeURIComponent(s.file) + "#page=" + s.page;
+      pillsHtml += '<a class="source-badge" href="' + url + '" target="_blank" title="Open at page ' + s.page + '">📄 '
+                + escHtml(s.file) + ' · p' + s.page + ' ↗</a>';
+    });
+
+    // Raw panel content
+    var rawContent = "";
+    if (raw_pages.length > 0) {
+      raw_pages.forEach(function(p) {
+        rawContent += '<div class="raw-page-header">📄 ' + escHtml(p.file) + ' — Page ' + p.page + '</div>'
+                   + escHtml(p.text) + '\n\n';
+      });
+    } else {
+      rawContent = '<div style="color:#64748b;font-size:11px">No source clauses available for this response.</div>';
+    }
+
+    // Build HTML
+    const badgeDiv  = document.createElement("div");
+    badgeDiv.className = "flex items-center gap-2 pl-1";
+    badgeDiv.innerHTML = '<span class="text-xs font-medium px-2 py-0.5 rounded-full ' + badgeClass + '">' + badgeLabel + '</span>';
+
+    const bodyDiv = document.createElement("div");
+    bodyDiv.className = "md-body max-w-[82%] bg-white border border-slate-200 shadow-sm text-sm px-4 py-3 rounded-2xl rounded-tl-sm text-slate-700 leading-relaxed";
+
+    // For not_in_source 
+    if (mode === "not_in_source") {
+      const banner = document.createElement("div");
+      banner.style.cssText = [
+        "background: linear-gradient(135deg, #fff7ed, #fef3c7)",
+        "border: 1.5px solid #f59e0b",
+        "border-radius: 10px",
+        "padding: 10px 14px",
+        "margin-bottom: 14px",
+        "display: flex",
+        "align-items: flex-start",
+        "gap: 10px"
+      ].join(";");
+      banner.innerHTML =
+        '<span style="font-size:18px;line-height:1.2">📭</span>'
+      + '<div>'
+      + '<div style="font-weight:700;color:#92400e;font-size:12.5px;margin-bottom:2px">Not found in your uploaded material</div>'
+      + '<div style="color:#a16207;font-size:11.5px;line-height:1.5">Your documents don\'t cover this topic. The answer below comes entirely from <strong>AI general knowledge</strong> — not your source material.</div>'
+      + '</div>';
+      bodyDiv.appendChild(banner);
+    }
+
+    const contentDiv = document.createElement("div");
+    contentDiv.innerHTML = renderCitations(marked.parse(reply), sources);
+    bodyDiv.appendChild(contentDiv);
+
+    // ── AI Supplement — always shown after source answer ──
+    if (ai_supplement) {
+      const divider = document.createElement("div");
+      divider.style.cssText = "margin: 14px -16px; border-top: 1px solid #e2e8f0;";
+
+      const aiHeader = document.createElement("div");
+      aiHeader.style.cssText = [
+        "display:flex", "align-items:center", "gap:8px",
+        "margin: 14px 0 8px", "padding: 8px 12px",
+        "background: linear-gradient(135deg, #eff6ff, #f0fdf4)",
+        "border: 1px solid #bfdbfe", "border-radius: 10px"
+      ].join(";");
+      aiHeader.innerHTML =
+        '<span style="font-size:15px">🌐</span>'
+      + '<div>'
+      + '<div style="font-weight:700;color:#1e40af;font-size:12px">From the Internet (AI Knowledge)</div>'
+      + '<div style="color:#3b82f6;font-size:11px;margin-top:1px">Source material had limited coverage — here\'s what we found beyond your documents</div>'
+      + '</div>';
+
+      const aiContent = document.createElement("div");
+      aiContent.innerHTML = marked.parse(ai_supplement);
+
+      bodyDiv.appendChild(divider);
+      bodyDiv.appendChild(aiHeader);
+      bodyDiv.appendChild(aiContent);
+    }
+
+    const pillsDiv = document.createElement("div");
+    pillsDiv.className = "pl-1 flex flex-wrap mt-1";
+    pillsDiv.innerHTML = pillsHtml;
+
+    const actionBar = document.createElement("div");
+    actionBar.className = "action-bar pl-1";
+    actionBar.innerHTML =
+      '<button class="action-btn btn-hybrid"  data-mode="hybrid">🔀 Source + AI</button>'
+    + '<button class="action-btn btn-expand"  data-mode="expand">✨ Expand with AI</button>'
+    + '<button class="action-btn btn-detail"  data-mode="detail">🔬 Explain in Detail</button>'
+    + '<button class="action-btn btn-kid"     data-mode="kid">🧒 Explain Like I\'m a Kid</button>'
+    + '<button class="action-btn btn-source"  data-mode="source_explain">📖 Source + Explain</button>'
+    + '<button class="action-btn btn-raw"     data-action="toggle-raw">📄 Show Exact Clauses</button>';
+
+    const rawPanel = document.createElement("div");
+    rawPanel.className = "raw-panel hidden";
+    rawPanel.innerHTML = rawContent;
+
+    wrap.appendChild(badgeDiv);
+    wrap.appendChild(bodyDiv);
+    if (pillsHtml) wrap.appendChild(pillsDiv);
+    wrap.appendChild(actionBar);
+    wrap.appendChild(rawPanel);
+
+    // Wire mode buttons — lock all on click
+    actionBar.querySelectorAll("[data-mode]").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        actionBar.querySelectorAll(".action-btn").forEach(function(b) {
+          b.disabled = true; b.style.opacity = "0.4"; b.style.cursor = "not-allowed";
+        });
+        btn.textContent = "Loading…";
+        sendMessage(btn.getAttribute("data-mode"), originalQuery);
+      });
+    });
+
+    // Wire raw toggle
+    const rawBtn = actionBar.querySelector("[data-action='toggle-raw']");
+    if (rawBtn) {
+      rawBtn.addEventListener("click", function() {
+        const hidden = rawPanel.classList.toggle("hidden");
+        rawBtn.textContent = hidden ? "📄 Show Exact Clauses" : "📄 Hide Exact Clauses";
+      });
+    }
+
+    chatWindow.appendChild(wrap);
+    scrollBottom();
+    saveChat();
+  }
+
+})();
+</script>
+
+</body>
+</html>

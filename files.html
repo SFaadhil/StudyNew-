@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>StudyNew | My Files</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'DM Sans', sans-serif; }
+
+    /* Theme toggle */
+    #themeToggle {
+      font-size: 13px; padding: 5px 12px; border-radius: 999px;
+      background: rgba(0,0,0,0.07); border: none; cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+    #themeToggle:hover { transform: scale(1.08); }
+    .dark #themeToggle { background: rgba(255,255,255,0.1); }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors duration-300">
+
+<!-- Auth Guard -->
+<script>
+  if (localStorage.getItem("isAdmin") !== "true") {
+    window.location.href = "login.html";
+  }
+</script>
+
+<header class="flex justify-between items-center px-8 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+  <div class="flex items-center gap-3">
+    <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+      </svg>
+    </div>
+    <span class="font-semibold text-slate-800 dark:text-slate-100">StudyNew</span>
+  </div>
+  <div class="flex gap-4 items-center text-sm">
+    <a href="chat.html" class="text-indigo-600 hover:underline">Chat</a>
+    <a href="index.html" class="text-slate-500 dark:text-slate-400 hover:underline">Home</a>
+    <button id="themeToggle" title="Toggle dark mode">🌗</button>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-8 py-10">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-100">Your Study Materials</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">All indexed PDFs — answers are sourced from these files</p>
+    </div>
+    <label for="uploadInput"
+      class="cursor-pointer bg-indigo-600 text-white text-sm px-5 py-2.5
+             rounded-full font-medium hover:bg-indigo-700 transition">
+      + Upload PDF
+    </label>
+    <input type="file" id="uploadInput" accept=".pdf" class="hidden" />
+  </div>
+
+  <!-- Upload status -->
+  <div id="uploadStatus" class="hidden mb-6 bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800
+       text-indigo-700 dark:text-indigo-300 text-sm px-4 py-3 rounded-xl">
+    Indexing your PDF…
+  </div>
+
+  <!-- File grid -->
+  <div id="fileGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <!-- Populated by JS -->
+    <div class="text-slate-400 text-sm col-span-3 text-center py-20">
+      Loading files…
+    </div>
+  </div>
+</main>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+async function loadFiles() {
+  const grid = document.getElementById("fileGrid");
+  try {
+    const res   = await fetch(`${API}/files`);
+    const files = await res.json();
+
+    if (!files.length) {
+      grid.innerHTML = `
+        <div class="col-span-3 text-center py-20 text-slate-400 dark:text-slate-500">
+          <div class="text-4xl mb-3">📂</div>
+          <p class="text-sm">No files indexed yet. Upload a PDF to get started.</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = files.map(f => `
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700
+                  hover:shadow-md transition p-5 flex flex-col gap-3">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 bg-red-50 dark:bg-red-950 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-medium text-slate-800 dark:text-slate-100 text-sm truncate">${f.name}</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${f.pages} page${f.pages !== 1 ? 's' : ''} indexed</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 pt-1">
+          <span class="flex-1 text-xs bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800
+                       rounded-full px-3 py-1 font-medium text-center">✅ Indexed</span>
+          <button onclick="deleteFile('${f.name}')"
+            class="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950
+                   px-3 py-1 rounded-full border border-red-100 dark:border-red-900 transition">
+            Delete
+          </button>
+        </div>
+      </div>
+    `).join("");
+
+  } catch (e) {
+    grid.innerHTML = `<div class="col-span-3 text-center py-20 text-red-400 text-sm">
+      ❌ Could not reach backend. Make sure the server is running.
+    </div>`;
+  }
+}
+
+async function deleteFile(filename) {
+  if (!confirm(`Delete "${filename}"? This will remove it from the index.`)) return;
+  await fetch(`${API}/files/${encodeURIComponent(filename)}`, { method: "DELETE" });
+  loadFiles();
+}
+
+// Upload handler
+document.getElementById("uploadInput").addEventListener("change", async function() {
+  const file = this.files[0];
+  if (!file) return;
+
+  const status = document.getElementById("uploadStatus");
+  status.textContent = `Indexing "${file.name}"…`;
+  status.classList.remove("hidden");
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res  = await fetch(`${API}/upload`, { method: "POST", body: formData });
+  const data = await res.json();
+
+  status.textContent = `✅ "${data.filename}" indexed — ${data.pages_indexed} pages ready`;
+  setTimeout(() => status.classList.add("hidden"), 4000);
+
+  loadFiles();
+  this.value = "";
+});
+
+loadFiles();
+
+// ── Dark / Light mode ──────────────────────────────
+(function() {
+  const root = document.documentElement;
+  const btn  = document.getElementById("themeToggle");
+  const saved = localStorage.getItem("theme");
+  if (saved) {
+    root.classList.toggle("dark", saved === "dark");
+  } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    root.classList.add("dark");
+  }
+  btn.addEventListener("click", () => {
+    root.classList.toggle("dark");
+    localStorage.setItem("theme", root.classList.contains("dark") ? "dark" : "light");
+  });
+})();
+</script>
+
+</body>
+</html>
